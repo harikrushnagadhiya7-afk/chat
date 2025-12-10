@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Chat Together</title>
+    <link rel="stylesheet" href="styles.css?v=5">
+    <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Header -->
+        <header class="chat-header">
+            <div class="header-left">
+                <button id="room-selector" class="room-selector" aria-label="Change room">
+                    <h1 id="room-name">general</h1>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M7,10L12,15L17,10H7Z"/>
+                    </svg>
+                </button>
+                <span id="online-count" class="online-count">0 online</span>
+            </div>
+            <div class="header-right">
+                <button id="share-btn" class="share-btn" aria-label="Share room">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18,16.08C17.24,16.08 16.56,16.38 16.04,16.85L8.91,12.7C8.96,12.47 9,12.24 9,12C9,11.76 8.96,11.53 8.91,11.3L15.96,7.19C16.5,7.69 17.21,8 18,8A3,3 0 0,0 21,5A3,3 0 0,0 18,2A3,3 0 0,0 15,5C15,5.24 15.04,5.47 15.09,5.7L8.04,9.81C7.5,9.31 6.79,9 6,9A3,3 0 0,0 3,12A3,3 0 0,0 6,15C6.79,15 7.5,14.69 8.04,14.19L15.16,18.34C15.11,18.55 15.08,18.77 15.08,19C15.08,20.61 16.39,21.91 18,21.91C19.61,21.91 20.92,20.6 20.92,19A2.84,2.84 0 0,0 18,16.08Z"/>
+                    </svg>
+                </button>
+                <button id="settings-btn" class="settings-btn" aria-label="Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11.03L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.22,8.95 2.27,9.22 2.46,9.37L4.57,11.03C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.22,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Connection Status -->
+        <div id="connection-status" class="connection-status" style="display: none;">
+            <span id="status-text">Connecting...</span>
+        </div>
+
+        <!-- Messages Area -->
+        <main class="messages-container" id="messages-container" role="main" aria-label="Chat messages">
+            <div class="welcome-message">
+                <p>Welcome to the chat room! Share this URL with others to chat together.</p>
+            </div>
+        </main>
+
+        <!-- Typing Indicator -->
+        <div id="typing-indicator" class="typing-indicator" style="display: none;">
+            <span id="typing-text"></span>
+        </div>
+
+        <!-- Input Area -->
+        <footer class="input-area">
+            <div class="input-container">
+                <textarea 
+                    id="message-input" 
+                    placeholder="Type your message..." 
+                    rows="1"
+                    maxlength="1000"
+                    aria-label="Message input"
+                ></textarea>
+                <button id="send-btn" class="send-btn" aria-label="Send message">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M2,21L23,12L2,3V10L17,12L2,14V21Z"/>
+                    </svg>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Room Selector Modal -->
+    <div id="room-modal" class="modal" style="display: none;" role="dialog" aria-labelledby="room-title" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="room-title">Join a Room</h2>
+                <button id="close-room-modal" class="close-btn" aria-label="Close room selector">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="room-input">Room Name:</label>
+                    <input type="text" id="room-input" maxlength="30" placeholder="Enter room name">
+                    <small>Create a new room or join an existing one</small>
+                </div>
+                <div class="quick-rooms">
+                    <h3>Quick Join:</h3>
+                    <div class="room-buttons">
+                        <button class="room-btn" data-room="general">General</button>
+                        <button class="room-btn" data-room="random">Random</button>
+                        <button class="room-btn" data-room="gaming">Gaming</button>
+                        <button class="room-btn" data-room="study">Study</button>
+                        <button class="room-btn" data-room="work">Work</button>
+                        <button class="room-btn" data-room="friends">Friends</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="join-room" class="btn-primary">Join Room</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="share-modal" class="modal" style="display: none;" role="dialog" aria-labelledby="share-title" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="share-title">Share Room</h2>
+                <button id="close-share-modal" class="close-btn" aria-label="Close share">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="share-url">Share this link with your friends:</label>
+                    <div class="share-url-container">
+                        <input type="text" id="share-url" readonly>
+                        <button id="copy-url" class="btn-copy">Copy</button>
+                    </div>
+                    <small>Anyone with this link can join your chat room</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal" style="display: none;" role="dialog" aria-labelledby="settings-title" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="settings-title">Settings</h2>
+                <button id="close-settings" class="close-btn" aria-label="Close settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="username-input">Username:</label>
+                    <input type="text" id="username-input" maxlength="30" placeholder="Enter your username">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="enter-to-send">
+                        Press Enter to send messages
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="dark-theme">
+                        Dark theme
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-settings" class="btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js?v=5"></script>
+</body>
+</html>
